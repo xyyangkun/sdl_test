@@ -27,6 +27,19 @@
 #define WINDOW_WIDTH 300
 #define WINDOW_HEIGHT (WINDOW_WIDTH)
 
+// 7yuv可以显示rgb24 获取rgba32
+// rgb24使用 ffplay -pixel_format rgb24 -video_size 160x60 -i 160_60.rgb -framerate 1
+// rgb24使用 ffplay -pixel_format rgba -video_size 160x60 -i 160_60.rgb -framerate 1 // 32位选择t
+void save_rgb(const char *name, const char *buf, const unsigned int len) {
+	FILE *fp = fopen(name, "wb");
+	if(!fp) {
+		printf("ERROR to open rgb file\n");
+		return;
+	}
+	fwrite(buf, len, 1, fp);
+	fclose(fp);
+}
+
 /*
 - x, y: upper left corner.
 - texture, rect: outputs.
@@ -59,7 +72,7 @@ void get_text_and_rect1(int x, int y, char *text,
     int text_height;
     SDL_Surface *surface;
 	// 设定字体显示颜色
-    SDL_Color textColor = {255, 255, 255, 0};
+    SDL_Color textColor = {255, 255, 255, 0}; // 白字
 
     surface = TTF_RenderText_Solid(font, text, textColor);
     text_width = surface->w;
@@ -70,10 +83,10 @@ void get_text_and_rect1(int x, int y, char *text,
 
 	// 生成一个较大的sufface
 	SDL_Surface *temp = SDL_CreateRGBSurface(SDL_SWSURFACE, 
-						dst_w, dst_h, 32, \
-						//0x00FF0000, 0x0000FF00, 0x000000FF,/*0x00FF0000, 0x0000FF00, 0x000000FF*/
-						0x00, 0x00, 0x00,/*0x00FF0000, 0x0000FF00, 0x000000FF*/
-						0);
+						dst_w, dst_h, 32/*24*/, \
+						0x00FF0000, 0x0000FF00, 0x000000FF,/*0x00FF0000, 0x0000FF00, 0x000000FF*/
+						//0x00, 0x00, 0x00,/*0x00FF0000, 0x0000FF00, 0x000000FF*/
+						0xFF000000/*alpha 0 透明, 所以使用ffmpeg全是黑色，所以要选择ff*/);
 	SDL_Rect src_bounds, dst_bounds;
 	if (temp != NULL) {
 		src_bounds.x = 0;
@@ -106,6 +119,8 @@ void get_text_and_rect1(int x, int y, char *text,
 
 	SDL_SaveBMP(surface, "surface.bmp");
 	SDL_SaveBMP(temp, "temp.bmp");
+	printf("BytesPerPixel=%d\n", temp->format->BytesPerPixel);
+	save_rgb("160_60.rgb", temp->pixels, temp->w*temp->h*temp->format->BytesPerPixel);
 
     SDL_FreeSurface(temp);
     SDL_FreeSurface(surface);
